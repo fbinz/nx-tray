@@ -53,8 +53,20 @@ func envOr(key, fallback string) string {
 
 // --- nxcli ---
 
+func redactArgs(args []string) string {
+	out := make([]string, len(args))
+	for i, a := range args {
+		if i > 0 && (args[i-1] == "-p" || args[i-1] == "--password") {
+			out[i] = "***"
+		} else {
+			out[i] = a
+		}
+	}
+	return strings.Join(out, " ")
+}
+
 func runNxcli(timeout time.Duration, args ...string) (string, int, error) {
-	cmdStr := nxcliBin + " " + strings.Join(args, " ")
+	cmdStr := nxcliBin + " " + redactArgs(args)
 	if debug {
 		log.Printf("exec: %s (timeout=%s)", cmdStr, timeout)
 	}
@@ -346,8 +358,10 @@ func onReady() {
 		}
 	}()
 
-	<-quit.ClickedCh
-	systray.Quit()
+	go func() {
+		<-quit.ClickedCh
+		systray.Quit()
+	}()
 }
 
 func (a *app) connName(idx int) string {
