@@ -31,12 +31,13 @@ Wraps the `nxcli` command-line tool in a tray icon with menus for connecting, di
 
 ### From release
 
-Download the binary from [Releases](https://github.com/fbinz/nx-tray/releases), then:
-
 ```bash
+wget https://github.com/fbinz/nx-tray/releases/latest/download/nx-tray
 chmod +x nx-tray
-./nx-tray
+./nx-tray install
 ```
+
+This copies the binary to `~/.local/bin/`, extracts the icon to `~/.local/share/icons/`, and creates an autostart entry so it launches on login.
 
 ### From source
 
@@ -46,13 +47,25 @@ sudo apt install golang-go libayatana-appindicator3-dev libgtk-3-dev
 git clone https://github.com/fbinz/nx-tray.git
 cd nx-tray
 make
-make install  # copies to ~/.local/bin + sets up autostart on login
+./nx-tray install
 ```
+
+### Uninstall
+
+```bash
+nx-tray uninstall
+```
+
+Removes the binary, icon, and autostart entry.
 
 ## Usage
 
 ```
-nx-tray [flags]
+nx-tray [command] [flags]
+
+Commands:
+  install       install to ~/.local/bin and set up autostart
+  uninstall     remove installed files
 
 Flags:
   -nxcli string   path to nxcli binary (default "/usr/sbin/nxcli", env: NXCLI)

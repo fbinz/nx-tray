@@ -34,6 +34,17 @@ func main() {
 	flag.BoolVar(&debug, "vv", false, "enable debug logging")
 	flag.Parse()
 
+	if len(flag.Args()) > 0 {
+		switch flag.Args()[0] {
+		case "install":
+			install()
+			return
+		case "uninstall":
+			uninstall()
+			return
+		}
+	}
+
 	if !verbose && !debug {
 		log.SetOutput(io.Discard)
 	}
@@ -42,6 +53,90 @@ func main() {
 	}
 
 	systray.Run(onReady, func() {})
+}
+
+func install() {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+
+	binDir := home + "/.local/bin"
+	iconDir := home + "/.local/share/icons"
+	autostartDir := home + "/.config/autostart"
+	binPath := binDir + "/nx-tray"
+	iconPath := iconDir + "/netextender.png"
+
+	for _, dir := range []string{binDir, iconDir, autostartDir} {
+		os.MkdirAll(dir, 0o755)
+	}
+
+	self, err := os.Executable()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: cannot find own path: %v\n", err)
+		os.Exit(1)
+	}
+
+	selfData, err := os.ReadFile(self)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: cannot read own binary: %v\n", err)
+		os.Exit(1)
+	}
+	if err := os.WriteFile(binPath, selfData, 0o755); err != nil {
+		fmt.Fprintf(os.Stderr, "error: cannot write %s: %v\n", binPath, err)
+		os.Exit(1)
+	}
+	fmt.Println("  " + binPath)
+
+	if err := os.WriteFile(iconPath, iconData, 0o644); err != nil {
+		fmt.Fprintf(os.Stderr, "error: cannot write %s: %v\n", iconPath, err)
+		os.Exit(1)
+	}
+	fmt.Println("  " + iconPath)
+
+	desktop := fmt.Sprintf(`[Desktop Entry]
+Type=Application
+Name=NetExtender Tray
+Comment=NetExtender VPN system tray manager
+Exec=%s
+Icon=%s
+Terminal=false
+X-GNOME-Autostart-enabled=true
+`, binPath, iconPath)
+
+	desktopPath := autostartDir + "/netextender-tray.desktop"
+	if err := os.WriteFile(desktopPath, []byte(desktop), 0o644); err != nil {
+		fmt.Fprintf(os.Stderr, "error: cannot write %s: %v\n", desktopPath, err)
+		os.Exit(1)
+	}
+	fmt.Println("  " + desktopPath)
+
+	fmt.Println("\nInstalled. Run with: nx-tray")
+}
+
+func uninstall() {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+
+	files := []string{
+		home + "/.local/bin/nx-tray",
+		home + "/.local/share/icons/netextender.png",
+		home + "/.config/autostart/netextender-tray.desktop",
+	}
+
+	for _, f := range files {
+		if err := os.Remove(f); err != nil && !os.IsNotExist(err) {
+			fmt.Fprintf(os.Stderr, "  warning: %v\n", err)
+		} else if err == nil {
+			fmt.Println("  removed " + f)
+		}
+	}
+
+	fmt.Println("\nUninstalled.")
 }
 
 func envOr(key, fallback string) string {
